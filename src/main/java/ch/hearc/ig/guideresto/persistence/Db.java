@@ -1,4 +1,4 @@
-package persistence;
+package ch.hearc.ig.guideresto.persistence;
 
 
 import java.io.InputStream;
