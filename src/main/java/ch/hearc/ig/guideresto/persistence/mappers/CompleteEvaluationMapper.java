@@ -1,7 +1,6 @@
 package ch.hearc.ig.guideresto.persistence.mappers;
 
 import ch.hearc.ig.guideresto.business.CompleteEvaluation;
-import ch.hearc.ig.guideresto.business.Grade;
 import ch.hearc.ig.guideresto.business.Restaurant;
 
 import java.sql.Date;
@@ -12,8 +11,6 @@ import java.util.*;
 
 public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation> {
 
-    private final GradeMapper gradeMapper = new GradeMapper();
-
     @Override protected String tableName() { return "COMMENTAIRES"; }
 
     private CompleteEvaluation build(ResultSet rs) throws SQLException {
@@ -23,11 +20,7 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
         ev.setVisitDate(d != null ? new java.util.Date(d.getTime()) : null);
         ev.setComment(rs.getString("commentaire"));
         ev.setUsername(rs.getString("nom_utilisateur"));
-
-        Restaurant r = new Restaurant();
-        r.setId(rs.getInt("fk_rest"));
-        ev.setRestaurant(r);
-
+        Restaurant r = new Restaurant(); r.setId(rs.getInt("fk_rest")); ev.setRestaurant(r);
         ev.setGrades(new HashSet<>());
         return ev;
     }
@@ -60,36 +53,20 @@ public class CompleteEvaluationMapper extends AbstractMapper<CompleteEvaluation>
         }
     }
 
-    /** Insert transactionnel : COMMENTAIRES + NOTES */
-    public CompleteEvaluation insertWithGrades(CompleteEvaluation ev) throws SQLException {
-        try {
-            connection().setAutoCommit(false);
-
-            String sql = "INSERT INTO COMMENTAIRES(date_eval, commentaire, nom_utilisateur, fk_rest) VALUES(?,?,?,?)";
-            try (PreparedStatement ps = connection().prepareStatement(sql, new String[]{"NUMERO"})) {
-                java.util.Date d = ev.getVisitDate();
-                ps.setDate(1, d != null ? new Date(d.getTime()) : null);
-                ps.setString(2, ev.getComment());
-                ps.setString(3, ev.getUsername());
-                ps.setInt(4, ev.getRestaurant().getId());
-                ps.executeUpdate();
-                try (ResultSet gk = ps.getGeneratedKeys()) { if (gk.next()) ev.setId(gk.getInt(1)); }
-            }
-
-            if (ev.getGrades() != null && !ev.getGrades().isEmpty()) {
-                gradeMapper.insertAllForEvaluation(ev.getId(), new ArrayList<Grade>(ev.getGrades()));
-            }
-
-            connection().commit();
-            putCache(ev.getId(), ev); // alimente le cache après succès
-            return ev;
-
-        } catch (SQLException e) {
-            connection().rollback();
-            throw e;
-        } finally {
-            connection().setAutoCommit(true);
+    /** Insertion SANS transaction (appelée depuis la couche Service). */
+    public CompleteEvaluation insertCore(CompleteEvaluation ev) throws SQLException {
+        String sql = "INSERT INTO COMMENTAIRES(date_eval, commentaire, nom_utilisateur, fk_rest) VALUES(?,?,?,?)";
+        try (PreparedStatement ps = connection().prepareStatement(sql, new String[]{"NUMERO"})) {
+            java.util.Date d = ev.getVisitDate();
+            ps.setDate(1, d != null ? new Date(d.getTime()) : null);
+            ps.setString(2, ev.getComment());
+            ps.setString(3, ev.getUsername());
+            ps.setInt(4, ev.getRestaurant().getId());
+            ps.executeUpdate();
+            try (ResultSet gk = ps.getGeneratedKeys()) { if (gk.next()) ev.setId(gk.getInt(1)); }
         }
+        putCache(ev.getId(), ev);
+        return ev;
     }
 
     public void delete(int id) throws SQLException {

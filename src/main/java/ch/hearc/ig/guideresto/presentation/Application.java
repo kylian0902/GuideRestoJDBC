@@ -1,22 +1,15 @@
 package ch.hearc.ig.guideresto.presentation;
 
 import ch.hearc.ig.guideresto.business.*;
-import ch.hearc.ig.guideresto.persistence.mappers.*;
+import ch.hearc.ig.guideresto.service.GuideRestoService;
+import ch.hearc.ig.guideresto.service.ServiceFactory;
 
 import java.sql.SQLException;
 import java.util.*;
 
 public class Application {
 
-    // === Mappers (remplacent FakeItems) ===
-    private final CityMapper cityMapper = new CityMapper();
-    private final RestaurantTypeMapper typeMapper = new RestaurantTypeMapper();
-    private final EvaluationCriteriaMapper criteriaMapper = new EvaluationCriteriaMapper();
-    private final RestaurantMapper restaurantMapper = new RestaurantMapper();
-    private final BasicEvaluationMapper basicEvalMapper = new BasicEvaluationMapper();          // LIKES
-    private final CompleteEvaluationMapper completeEvalMapper = new CompleteEvaluationMapper(); // COMMENTAIRES
-    private final GradeMapper gradeMapper = new GradeMapper();                                  // NOTES
-
+    private final GuideRestoService service = ServiceFactory.get();
     private final Scanner in = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -56,11 +49,11 @@ public class Application {
     }
 
     // ----------------------------------------------------------------------
-    // 1) Lister restaurants (remplace FakeItems.getAllRestaurants())
+    // 1) Lister restaurants
     // ----------------------------------------------------------------------
     private void listRestaurants() {
         try {
-            List<Restaurant> restos = restaurantMapper.findAll();
+            List<Restaurant> restos = service.getAllRestaurants();
             if (restos.isEmpty()) {
                 System.out.println("(aucun restaurant)");
                 return;
@@ -82,17 +75,15 @@ public class Application {
 
     // ----------------------------------------------------------------------
     // 2) Détails d’un restaurant
-    //    (remplace FakeItems.getLikes(r) / FakeItems.getCompleteEvaluations(r))
     // ----------------------------------------------------------------------
     private void showRestaurantDetails() {
         try {
             int id = readInt("Id du restaurant: ");
-            Optional<Restaurant> opt = restaurantMapper.findById(id);
-            if (opt.isEmpty()) {
+            Restaurant r = service.getRestaurantById(id);
+            if (r == null) {
                 System.out.println("Restaurant introuvable.");
                 return;
             }
-            Restaurant r = opt.get();
             System.out.println("\n-- Détails du restaurant --");
             System.out.println("Nom: " + safe(r.getName()));
             System.out.println("Type: " + (r.getType() != null ? safe(r.getType().getLabel()) : "?"));
@@ -102,13 +93,13 @@ public class Application {
             }
 
             // Likes (LIKES)
-            List<BasicEvaluation> likes = basicEvalMapper.findByRestaurant(nz(r.getId()));
+            List<BasicEvaluation> likes = service.getLikesByRestaurant(nz(r.getId()));
             long likesCount = likes.stream().filter(be -> Boolean.TRUE.equals(be.getLikeRestaurant())).count();
             long dislikesCount = likes.size() - likesCount;
             System.out.printf("Likes: %d | Dislikes: %d%n", likesCount, dislikesCount);
 
-            // Évaluations complètes (COMMENTAIRES) + (option) charger les notes (NOTES)
-            List<CompleteEvaluation> evals = completeEvalMapper.findByRestaurant(nz(r.getId()));
+            // Évaluations complètes
+            List<CompleteEvaluation> evals = service.getCompleteEvaluationsByRestaurant(nz(r.getId()));
             if (evals.isEmpty()) {
                 System.out.println("(aucune évaluation complète)");
             } else {
@@ -117,13 +108,6 @@ public class Application {
                     String date = (ev.getVisitDate() != null) ? ev.getVisitDate().toString() : "?";
                     System.out.printf("  #%d [%s] par %s : %s%n",
                             nz(ev.getId()), date, safe(ev.getUsername()), safe(ev.getComment()));
-                    // si tu veux afficher les notes :
-                    // var notes = gradeMapper.findByEvaluation(nz(ev.getId()));
-                    // for (Grade g : notes) {
-                    //     System.out.printf("    - Critère #%d : %d/10%n",
-                    //         nz(g.getCriteria() != null ? g.getCriteria().getId() : null),
-                    //         nz(g.getGrade()));
-                    // }
                 }
             }
 
@@ -133,17 +117,16 @@ public class Application {
     }
 
     // ----------------------------------------------------------------------
-    // 3) Ajouter un LIKE (remplace FakeItems.addLike(...))
+    // 3) Ajouter un LIKE
     // ----------------------------------------------------------------------
     private void addLike() {
         try {
             int restId = readInt("Id du restaurant: ");
-            Optional<Restaurant> opt = restaurantMapper.findById(restId);
-            if (opt.isEmpty()) {
+            Restaurant r = service.getRestaurantById(restId);
+            if (r == null) {
                 System.out.println("Restaurant introuvable.");
                 return;
             }
-            Restaurant r = opt.get();
 
             String val = readString("Like ? (o/n): ").trim().toLowerCase(Locale.ROOT);
             boolean like = val.startsWith("o") || val.startsWith("y");
@@ -155,26 +138,24 @@ public class Application {
             be.setVisitDate(new Date()); // maintenant
             be.setIpAddress(ip.isBlank() ? null : ip);
 
-            basicEvalMapper.insert(be);
-            System.out.println("LIKE ajouté (#" + nz(be.getId()) + ")");
+            service.addLike(be);
+            System.out.println("✅ LIKE ajouté (#" + nz(be.getId()) + ")");
         } catch (SQLException e) {
             error("Impossible d'ajouter le LIKE", e);
         }
     }
 
     // ----------------------------------------------------------------------
-    // 4) Ajouter une évaluation complète (remplace FakeItems.addCompleteEvaluation(...))
-    //    Insert transactionnel: COMMENTAIRES + NOTES
+    // 4) Ajouter une évaluation complète (transaction Service)
     // ----------------------------------------------------------------------
     private void addCompleteEvaluation() {
         try {
             int restId = readInt("Id du restaurant: ");
-            Optional<Restaurant> opt = restaurantMapper.findById(restId);
-            if (opt.isEmpty()) {
+            Restaurant r = service.getRestaurantById(restId);
+            if (r == null) {
                 System.out.println("Restaurant introuvable.");
                 return;
             }
-            Restaurant r = opt.get();
 
             String user = readString("Votre nom (affiché): ");
             String comment = readString("Commentaire: ");
@@ -184,11 +165,10 @@ public class Application {
             ev.setUsername(user);
             ev.setComment(comment);
             ev.setVisitDate(new Date()); // maintenant
-            ev.setGrades(new HashSet<>()); // on peut ajouter des notes ci-dessous
+            ev.setGrades(new HashSet<>());
 
-            // (Option) proposer de saisir quelques notes :
             if (yesNo("Ajouter des notes (y/n) ? ")) {
-                List<EvaluationCriteria> criterias = criteriaMapper.findAll();
+                List<EvaluationCriteria> criterias = service.getCriterias();
                 if (criterias.isEmpty()) {
                     System.out.println("(aucun critère)");
                 } else {
@@ -213,8 +193,8 @@ public class Application {
                 }
             }
 
-            completeEvalMapper.insertWithGrades(ev);
-            System.out.println("Évaluation complète ajoutée (#" + nz(ev.getId()) + ")");
+            service.addCompleteEvaluation(ev);
+            System.out.println("✅ Évaluation complète ajoutée (#" + nz(ev.getId()) + ")");
 
         } catch (SQLException e) {
             error("Impossible d'ajouter l'évaluation complète", e);
@@ -248,17 +228,12 @@ public class Application {
     }
 
     private static void error(String msg, Exception e) {
-        System.out.println(msg);
+        System.out.println("❌ " + msg);
         if (e != null) {
             System.out.println("    → " + e.getMessage());
         }
     }
 
-    private static String safe(String s) {
-        return (s == null) ? "" : s;
-    }
-
-    private static int nz(Integer i) {
-        return (i == null) ? 0 : i;
-    }
+    private static String safe(String s) { return (s == null) ? "" : s; }
+    private static int nz(Integer i) { return (i == null) ? 0 : i; }
 }
