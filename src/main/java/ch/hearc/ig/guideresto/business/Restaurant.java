@@ -81,6 +81,9 @@ public class Restaurant implements IBusinessObject {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "fk_type", nullable = false)
     private RestaurantType type;
+    @Version
+    @Column(name = "version", nullable = false)
+    private Integer version;
 
     public Restaurant() {
         this(null, null, null, null, null, null);

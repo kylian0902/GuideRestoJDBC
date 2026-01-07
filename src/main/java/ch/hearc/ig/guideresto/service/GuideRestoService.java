@@ -21,4 +21,5 @@ public interface GuideRestoService {
     void addLike(BasicEvaluation like) throws SQLException;
     void addCompleteEvaluation(CompleteEvaluation eval) throws SQLException;
     void addRestaurant(Restaurant restaurant) throws SQLException;
+    void updateRestaurant(int id, String name, String website, String description) throws SQLException;
 }

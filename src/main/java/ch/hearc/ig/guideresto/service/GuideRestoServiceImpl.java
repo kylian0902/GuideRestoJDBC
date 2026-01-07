@@ -1,8 +1,10 @@
 package ch.hearc.ig.guideresto.service;
 
 import ch.hearc.ig.guideresto.business.*;
+import ch.hearc.ig.guideresto.persistence.jpa.JpaUtils;
 import ch.hearc.ig.guideresto.persistence.mappers.*;
 import ch.hearc.ig.guideresto.persistence.tx.TransactionManager;
+import jakarta.persistence.OptimisticLockException;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -57,5 +59,29 @@ public class GuideRestoServiceImpl implements GuideRestoService {
     @Override
     public void addRestaurant(Restaurant restaurant) throws SQLException {
         throw new UnsupportedOperationException("Not implemented in JDBC service (use GuideRestoServiceJpaImpl)");
+    }
+    @Override
+    public void updateRestaurant(int id, String name, String website, String description) throws SQLException {
+        try {
+            JpaUtils.inTx(em -> {
+                Restaurant r = em.find(Restaurant.class, id); // charge version aussi
+                if (r == null) {
+                    throw new IllegalArgumentException("Restaurant introuvable (id=" + id + ")");
+                }
+
+                // modifications “simples”
+                if (name != null && !name.isBlank()) r.setName(name.trim());
+                r.setWebsite((website == null || website.isBlank()) ? null : website.trim());
+                r.setDescription((description == null || description.isBlank()) ? null : description.trim());
+
+                // À la fin de la transaction -> flush -> UPDATE avec contrôle version
+                return null;
+            });
+        } catch (OptimisticLockException ole) {
+            // ✅ le cas important Ex7 : conflit de concurrence
+            throw new SQLException("Conflit: le restaurant a été modifié par quelqu’un d’autre. Recharge et réessaie.", ole);
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 }

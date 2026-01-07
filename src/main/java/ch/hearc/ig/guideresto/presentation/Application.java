@@ -32,6 +32,7 @@ public class Application {
                 case 3 -> addLike();
                 case 4 -> addCompleteEvaluation();
                 case 5 -> addRestaurant(); // ✅ NOUVEAU
+                case 6 -> updateRestaurant();
                 case 0 -> System.out.println("Au revoir 👋");
                 default -> System.out.println("Choix invalide.");
             }
@@ -46,6 +47,7 @@ public class Application {
         System.out.println("3) Ajouter un LIKE");
         System.out.println("4) Ajouter une évaluation complète");
         System.out.println("5) Ajouter un restaurant"); // ✅ NOUVEAU
+        System.out.println("6) Modifier un restaurant");
         System.out.println("0) Quitter");
         System.out.println("=============================");
     }
@@ -302,6 +304,36 @@ public class Application {
         c.setZipCode(zip);
         c.setCityName(cityName);
         return c;
+    }
+
+    // ======================================================================
+    // 6) Modifier un restaurant
+    // ======================================================================
+    private void updateRestaurant() {
+        try {
+            int id = readInt("Id du restaurant à modifier: ");
+            Restaurant r = service.getRestaurantById(id);
+            if (r == null) {
+                System.out.println("Restaurant introuvable.");
+                return;
+            }
+
+            System.out.println("\n-- Modification -- (laisser vide pour ne pas changer)");
+            System.out.println("Nom actuel: " + safe(r.getName()));
+            String name = readString("Nouveau nom: ");
+
+            System.out.println("Site actuel: " + safe(r.getWebsite()));
+            String website = readString("Nouveau site: ");
+
+            System.out.println("Description actuelle: " + safe(r.getDescription()));
+            String desc = readString("Nouvelle description: ");
+
+            service.updateRestaurant(id, name, website, desc);
+            System.out.println("✅ Restaurant modifié.");
+
+        } catch (SQLException e) {
+            error("Impossible de modifier le restaurant", e);
+        }
     }
 
     // ======================================================================
