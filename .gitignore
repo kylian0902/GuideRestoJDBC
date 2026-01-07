@@ -37,8 +37,5 @@ build/
 ### Mac OS ###
 .DS_Store
 
-### Configuration files ###
-src/main/resources/database.properties
-
 ### Log files ###
 logs/*
