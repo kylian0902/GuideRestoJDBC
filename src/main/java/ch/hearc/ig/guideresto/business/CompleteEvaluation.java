@@ -10,6 +10,28 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
+@NamedQueries({
+        @NamedQuery(
+                name = "CompleteEvaluation.findById",
+                query = "select c from CompleteEvaluation c where c.id = :id"
+        ),
+        @NamedQuery(
+                name = "CompleteEvaluation.findByRestaurantId",
+                query = """
+          select c from CompleteEvaluation c
+          where c.restaurant.id = :restId
+          order by c.visitDate desc
+      """
+        ),
+        @NamedQuery(
+                name = "CompleteEvaluation.findByUsername",
+                query = """
+          select c from CompleteEvaluation c
+          where c.username = :username
+          order by c.visitDate desc
+      """
+        )
+})
 @Table(name="COMMENTAIRES")
 public class CompleteEvaluation extends Evaluation {
 

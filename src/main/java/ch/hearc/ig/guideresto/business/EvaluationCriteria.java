@@ -7,6 +7,20 @@ import jakarta.persistence.*;
  * @author cedric.baudet
  */
 @Entity
+@NamedQueries({
+        @NamedQuery(
+                name = "EvaluationCriteria.findAll",
+                query = "select c from EvaluationCriteria c order by c.id"
+        ),
+        @NamedQuery(
+                name = "EvaluationCriteria.findById",
+                query = "select c from EvaluationCriteria c where c.id = :id"
+        ),
+        @NamedQuery(
+                name = "EvaluationCriteria.findByName",
+                query = "select c from EvaluationCriteria c where c.name = :name"
+        )
+})
 @Table(name = "CRITERES_EVALUATION")
 public class EvaluationCriteria implements IBusinessObject {
 

@@ -2,100 +2,97 @@ package ch.hearc.ig.guideresto.service;
 
 import ch.hearc.ig.guideresto.business.*;
 import ch.hearc.ig.guideresto.persistence.jpa.JpaUtils;
+import ch.hearc.ig.guideresto.persistence.jpa.mapper.*;
 
 import java.sql.SQLException;
 import java.util.List;
 
 public class GuideRestoServiceJpaImpl implements GuideRestoService {
 
+    private final RestaurantMapperJpa restaurantMapper = new RestaurantMapperJpa();
+    private final CityMapperJpa cityMapper = new CityMapperJpa();
+    private final RestaurantTypeMapperJpa typeMapper = new RestaurantTypeMapperJpa();
+    private final EvaluationCriteriaMapperJpa criteriaMapper = new EvaluationCriteriaMapperJpa();
+    private final BasicEvaluationMapperJpa basicEvalMapper = new BasicEvaluationMapperJpa();
+    private final CompleteEvaluationMapperJpa completeEvalMapper = new CompleteEvaluationMapperJpa();
+    private final GradeMapperJpa gradeMapper = new GradeMapperJpa(); // pas forcément utilisé partout
+
     // -------- LECTURE --------
     @Override
     public List<Restaurant> getAllRestaurants() throws SQLException {
         try {
-            return JpaUtils.inRead(em ->
-                    em.createQuery("""
-              select r from Restaurant r
-              join fetch r.type
-              join fetch r.address.city
-              order by r.id
-          """, Restaurant.class).getResultList()
-            );
-        } catch (Exception e) { throw new SQLException(e); }
+            // Ex5: passer par le Mapper + NamedQuery Restaurant.findAll
+            return restaurantMapper.findAll();
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public Restaurant getRestaurantById(int id) throws SQLException {
         try {
+            // Ex5: passer par NamedQuery Restaurant.findById (avec fetch)
+            // On utilise JpaUtils ici car ton RestaurantMapperJpa actuel n'expose pas findById "fetch".
+            // Si tu veux, tu peux ajouter restaurantMapper.findByIdFetch(id).
             return JpaUtils.inRead(em ->
-                    em.createQuery("""
-              select r from Restaurant r
-              join fetch r.type
-              join fetch r.address.city
-              where r.id = :id
-          """, Restaurant.class)
+                    em.createNamedQuery("Restaurant.findById", Restaurant.class)
                             .setParameter("id", id)
                             .getResultStream()
                             .findFirst()
                             .orElse(null)
             );
-        } catch (Exception e) { throw new SQLException(e); }
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public List<BasicEvaluation> getLikesByRestaurant(int restId) throws SQLException {
         try {
-            return JpaUtils.inRead(em ->
-                    em.createQuery("""
-              select b from BasicEvaluation b
-              where b.restaurant.id = :id
-              order by b.visitDate desc
-          """, BasicEvaluation.class)
-                            .setParameter("id", restId)
-                            .getResultList()
-            );
-        } catch (Exception e) { throw new SQLException(e); }
+            // Ex5: Mapper + NamedQuery BasicEvaluation.findByRestaurantId
+            return basicEvalMapper.findByRestaurantId(restId);
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public List<CompleteEvaluation> getCompleteEvaluationsByRestaurant(int restId) throws SQLException {
         try {
-            return JpaUtils.inRead(em ->
-                    em.createQuery("""
-              select c from CompleteEvaluation c
-              where c.restaurant.id = :id
-              order by c.visitDate desc
-          """, CompleteEvaluation.class)
-                            .setParameter("id", restId)
-                            .getResultList()
-            );
-        } catch (Exception e) { throw new SQLException(e); }
+            // Ex5: Mapper + NamedQuery CompleteEvaluation.findByRestaurantIdWithGrades
+            // (si tu n'as pas encore la NamedQuery "WithGrades", remplace par findByRestaurantId)
+            return completeEvalMapper.findByRestaurantId(restId);
+
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public List<City> getCities() throws SQLException {
         try {
-            return JpaUtils.inRead(em ->
-                    em.createQuery("select c from City c order by c.id", City.class).getResultList()
-            );
-        } catch (Exception e) { throw new SQLException(e); }
+            return cityMapper.findAll();
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public List<RestaurantType> getTypes() throws SQLException {
         try {
-            return JpaUtils.inRead(em ->
-                    em.createQuery("select t from RestaurantType t order by t.id", RestaurantType.class).getResultList()
-            );
-        } catch (Exception e) { throw new SQLException(e); }
+            return typeMapper.findAll();
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public List<EvaluationCriteria> getCriterias() throws SQLException {
         try {
-            return JpaUtils.inRead(em ->
-                    em.createQuery("select c from EvaluationCriteria c order by c.id", EvaluationCriteria.class).getResultList()
-            );
-        } catch (Exception e) { throw new SQLException(e); }
+            return criteriaMapper.findAll();
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     // -------- ECRITURE --------
@@ -103,42 +100,50 @@ public class GuideRestoServiceJpaImpl implements GuideRestoService {
     public void addLike(BasicEvaluation like) throws SQLException {
         try {
             JpaUtils.inTx(em -> {
-                // IMPORTANT : rattacher un Restaurant "managed"
+                // 1) Rattacher le restaurant (managed)
                 Integer restId = like.getRestaurant().getId();
                 like.setRestaurant(em.getReference(Restaurant.class, restId));
 
-                // Si ta DB refuse NULL sur adresse_ip, il faut forcer une valeur
+                // 2) DB : si adresse_ip NOT NULL
                 if (like.getIpAddress() == null || like.getIpAddress().isBlank()) {
-                    like.setIpAddress("0.0.0.0"); // simple valeur par défaut
+                    like.setIpAddress("0.0.0.0");
                 }
 
+                // 3) Persist
                 em.persist(like);
                 return null;
             });
-        } catch (Exception e) { throw new SQLException(e); }
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
     public void addCompleteEvaluation(CompleteEvaluation eval) throws SQLException {
         try {
             JpaUtils.inTx(em -> {
-                // 1) restaurant (managed)
+                // 1) Rattacher le restaurant (managed)
                 Integer restId = eval.getRestaurant().getId();
                 eval.setRestaurant(em.getReference(Restaurant.class, restId));
 
-                // 2) notes : lier chaque Grade à l'évaluation + rattacher criteria
+                // 2) Lier les grades + rattacher les criteria (managed)
                 if (eval.getGrades() != null) {
                     for (Grade g : eval.getGrades()) {
                         g.setEvaluation(eval); // obligatoire (mappedBy)
-                        Integer critId = g.getCriteria().getId();
-                        g.setCriteria(em.getReference(EvaluationCriteria.class, critId));
+
+                        if (g.getCriteria() != null && g.getCriteria().getId() != null) {
+                            Integer critId = g.getCriteria().getId();
+                            g.setCriteria(em.getReference(EvaluationCriteria.class, critId));
+                        }
                     }
                 }
 
-                // 3) persist (cascade -> grades)
+                // 3) Persist (cascade ALL sur grades recommandé)
                 em.persist(eval);
                 return null;
             });
-        } catch (Exception e) { throw new SQLException(e); }
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
     }
 }

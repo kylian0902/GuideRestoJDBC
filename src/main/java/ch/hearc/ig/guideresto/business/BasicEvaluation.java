@@ -12,6 +12,28 @@ import java.util.Date;
  */
 
 @Entity
+@NamedQueries({
+        @NamedQuery(
+                name = "BasicEvaluation.findById",
+                query = "select b from BasicEvaluation b where b.id = :id"
+        ),
+        @NamedQuery(
+                name = "BasicEvaluation.findByRestaurantId",
+                query = """
+          select b from BasicEvaluation b
+          where b.restaurant.id = :restId
+          order by b.visitDate desc
+      """
+        ),
+        @NamedQuery(
+                name = "BasicEvaluation.findByRestaurantIdAndValue",
+                query = """
+          select b from BasicEvaluation b
+          where b.restaurant.id = :restId and b.likeRestaurant = :val
+          order by b.visitDate desc
+      """
+        )
+})
 @Table(name="LIKES")
 public class BasicEvaluation extends Evaluation {
 

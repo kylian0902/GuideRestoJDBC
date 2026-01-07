@@ -2,11 +2,31 @@ package ch.hearc.ig.guideresto.business;
 
 import jakarta.persistence.*;
 import java.util.Date;
+import jakarta.persistence.NamedQueries;
+import jakarta.persistence.NamedQuery;
 
 /**
  * @author cedric.baudet
  */
 @Entity
+@NamedQueries({
+        @NamedQuery(
+                name = "Evaluation.findAll",
+                query = "select e from Evaluation e order by e.visitDate desc"
+        ),
+        @NamedQuery(
+                name = "Evaluation.findById",
+                query = "select e from Evaluation e where e.id = :id"
+        ),
+        @NamedQuery(
+                name = "Evaluation.findByRestaurantId",
+                query = """
+          select e from Evaluation e
+          where e.restaurant.id = :restId
+          order by e.visitDate desc
+      """
+        ),
+})
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class Evaluation implements IBusinessObject {
 

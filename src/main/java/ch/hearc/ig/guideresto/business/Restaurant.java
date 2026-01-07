@@ -9,6 +9,56 @@ import jakarta.persistence.*;
  * @author cedric.baudet
  */
 @Entity
+@NamedQueries({
+        @NamedQuery(
+                name = "Restaurant.findAll",
+                query = """
+          select r from Restaurant r
+          join fetch r.type
+          join fetch r.address.city
+          order by r.name
+      """
+        ),
+        @NamedQuery(
+                name = "Restaurant.findById",
+                query = """
+          select r from Restaurant r
+          join fetch r.type
+          join fetch r.address.city
+          where r.id = :id
+      """
+        ),
+
+        @NamedQuery(
+                name = "Restaurant.findByName",
+                query = "select r from Restaurant r where r.name = :name"
+        ),
+        @NamedQuery(
+                name = "Restaurant.findByNameAndCityId",
+                query = "select r from Restaurant r where r.name = :name and r.address.city.id = :cityId"
+        ),
+
+        @NamedQuery(
+                name = "Restaurant.findByCityId",
+                query = """
+          select r from Restaurant r
+          join fetch r.type
+          join fetch r.address.city
+          where r.address.city.id = :cityId
+          order by r.name
+      """
+        ),
+        @NamedQuery(
+                name = "Restaurant.findByTypeId",
+                query = """
+          select r from Restaurant r
+          join fetch r.type
+          join fetch r.address.city
+          where r.type.id = :typeId
+          order by r.name
+      """
+        )
+})
 @Table(name = "RESTAURANTS")
 public class Restaurant implements IBusinessObject {
 

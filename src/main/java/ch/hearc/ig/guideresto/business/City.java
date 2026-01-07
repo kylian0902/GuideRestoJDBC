@@ -8,6 +8,28 @@ import jakarta.persistence.*;
  * @author cedric.baudet
  */
 @Entity
+@NamedQueries({
+        @NamedQuery(
+                name = "City.findAll",
+                query = "select c from City c order by c.cityName"
+        ),
+        @NamedQuery(
+                name = "City.findById",
+                query = "select c from City c where c.id = :id"
+        ),
+        @NamedQuery(
+                name = "City.findByZipAndName",
+                query = "select c from City c where c.zipCode = :zip and c.cityName = :name"
+        ),
+        @NamedQuery(
+                name = "City.findByZip",
+                query = "select c from City c where c.zipCode = :zip order by c.cityName"
+        ),
+        @NamedQuery(
+                name = "City.findByName",
+                query = "select c from City c where c.cityName = :name"
+        )
+})
 @Table(name="VILLES")
 public class City implements IBusinessObject {
 

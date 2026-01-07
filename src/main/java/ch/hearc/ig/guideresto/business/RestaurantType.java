@@ -8,6 +8,20 @@ import jakarta.persistence.*;
  * @author cedric.baudet
  */
 @Entity
+@NamedQueries({
+        @NamedQuery(
+                name = "RestaurantType.findAll",
+                query = "select t from RestaurantType t order by t.label"
+        ),
+        @NamedQuery(
+                name = "RestaurantType.findById",
+                query = "select t from RestaurantType t where t.id = :id"
+        ),
+        @NamedQuery(
+                name = "RestaurantType.findByLabel",
+                query = "select t from RestaurantType t where t.label = :label"
+        )
+})
 @Table(name="TYPES_GASTRONOMIQUES")
 public class RestaurantType implements IBusinessObject {
 
