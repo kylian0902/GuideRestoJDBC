@@ -25,7 +25,7 @@ public class RestaurantType implements IBusinessObject {
     @Lob
     @Column(name="description")
     private String description;
-    @Transient
+    @OneToMany(mappedBy = "type", fetch = FetchType.LAZY)
     private Set<Restaurant> restaurants;
 
     public RestaurantType() {

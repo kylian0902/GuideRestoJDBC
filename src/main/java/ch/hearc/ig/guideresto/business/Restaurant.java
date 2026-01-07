@@ -26,9 +26,10 @@ public class Restaurant implements IBusinessObject {
     private String website;
     @Transient
     private Set<Evaluation> evaluations;
-    @Transient
+    @Embedded
     private Localisation address;
-    @Transient
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "fk_type", nullable = false)
     private RestaurantType type;
 
     public Restaurant() {

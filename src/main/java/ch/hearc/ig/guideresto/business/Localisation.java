@@ -1,11 +1,17 @@
 package ch.hearc.ig.guideresto.business;
 
+import jakarta.persistence.*;
+
 /**
  * @author cedric.baudet
  */
+@Embeddable
 public class Localisation {
 
+    @Column(name = "adresse", nullable = false)
     private String street;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "fk_vill", nullable = false)
     private City city;
 
     public Localisation() {
