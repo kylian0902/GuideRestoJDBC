@@ -1,21 +1,34 @@
 package ch.hearc.ig.guideresto.business;
 
 import org.apache.commons.collections4.CollectionUtils;
-
 import java.util.HashSet;
 import java.util.Set;
+import jakarta.persistence.*;
 
 /**
  * @author cedric.baudet
  */
+@Entity
+@Table(name = "RESTAURANTS")
 public class Restaurant implements IBusinessObject {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "seq_restaurants")
+    @SequenceGenerator(name = "seq_restaurants", sequenceName = "SEQ_RESTAURANTS", allocationSize = 1)
+    @Column(name = "NUMERO")
     private Integer id;
+    @Column(name = "NOM")
     private String name;
+    @Lob
+    @Column(name = "DESCRIPTION")
     private String description;
+    @Column(name = "SITE_WEB")
     private String website;
+    @Transient
     private Set<Evaluation> evaluations;
+    @Transient
     private Localisation address;
+    @Transient
     private RestaurantType type;
 
     public Restaurant() {
