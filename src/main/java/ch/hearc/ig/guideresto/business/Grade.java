@@ -1,13 +1,26 @@
 package ch.hearc.ig.guideresto.business;
 
+import jakarta.persistence.*;
+
 /**
  * @author cedric.baudet
  */
+@Entity
+@Table(name="NOTES")
 public class Grade implements IBusinessObject {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "notes_seq")
+    @SequenceGenerator(name="notes_seq", sequenceName="SEQ_NOTES", allocationSize=1)
+    @Column(name="numero")
     private Integer id;
+    @Column(name="note", nullable=false)
     private Integer grade;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name="fk_comm", nullable=false)
     private CompleteEvaluation evaluation;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name="fk_crit", nullable=false)
     private EvaluationCriteria criteria;
 
     public Grade() {

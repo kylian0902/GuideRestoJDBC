@@ -24,7 +24,7 @@ public class Restaurant implements IBusinessObject {
     private String description;
     @Column(name = "SITE_WEB")
     private String website;
-    @Transient
+    @OneToMany(mappedBy="restaurant", fetch = FetchType.LAZY)
     private Set<Evaluation> evaluations;
     @Embedded
     private Localisation address;
