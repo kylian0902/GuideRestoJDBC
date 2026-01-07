@@ -31,6 +31,7 @@ public class Application {
                 case 2 -> showRestaurantDetails();
                 case 3 -> addLike();
                 case 4 -> addCompleteEvaluation();
+                case 5 -> addRestaurant(); // ✅ NOUVEAU
                 case 0 -> System.out.println("Au revoir 👋");
                 default -> System.out.println("Choix invalide.");
             }
@@ -44,6 +45,7 @@ public class Application {
         System.out.println("2) Voir détails d'un restaurant");
         System.out.println("3) Ajouter un LIKE");
         System.out.println("4) Ajouter une évaluation complète");
+        System.out.println("5) Ajouter un restaurant"); // ✅ NOUVEAU
         System.out.println("0) Quitter");
         System.out.println("=============================");
     }
@@ -201,6 +203,107 @@ public class Application {
         }
     }
 
+    // ----------------------------------------------------------------------
+    // 5) Ajouter un restaurant (transaction Service) ✅ NOUVEAU
+    // ----------------------------------------------------------------------
+    private void addRestaurant() {
+        try {
+            System.out.println("\n-- Ajout d'un restaurant --");
+
+            // 1) Infos restaurant
+            String name = readNonBlank("Nom du restaurant: ");
+            String website = readString("Site web (optionnel): ").trim();
+            String desc = readString("Description (optionnel): ").trim();
+
+            // 2) Choix du type
+            List<RestaurantType> types = service.getTypes();
+            if (types.isEmpty()) {
+                System.out.println("Aucun type de restaurant disponible (TYPES_GASTRONOMIQUES vide).");
+                return;
+            }
+
+            System.out.println("\n-- Types disponibles --");
+            for (RestaurantType t : types) {
+                System.out.printf("  #%d  %s%n", nz(t.getId()), safe(t.getLabel()));
+            }
+
+            int typeId = readInt("Id du type choisi: ");
+            RestaurantType chosenType = types.stream()
+                    .filter(t -> t.getId() != null && t.getId() == typeId)
+                    .findFirst()
+                    .orElse(null);
+
+            if (chosenType == null) {
+                System.out.println("Type introuvable.");
+                return;
+            }
+
+            // 3) Adresse + Ville
+            String street = readNonBlank("Adresse (rue + numéro): ");
+
+            City chosenCity;
+            if (yesNo("Utiliser une ville existante ? (y/n): ")) {
+                List<City> cities = service.getCities();
+                if (cities.isEmpty()) {
+                    System.out.println("Aucune ville disponible. On va en créer une nouvelle.");
+                    chosenCity = readNewCity();
+                } else {
+                    System.out.println("\n-- Villes disponibles --");
+                    for (City c : cities) {
+                        System.out.printf("  #%d  %d  %s%n",
+                                nz(c.getId()), safe(c.getZipCode()), safe(c.getCityName()));
+                    }
+                    int cityId = readInt("Id de la ville choisie: ");
+                    chosenCity = cities.stream()
+                            .filter(c -> c.getId() != null && c.getId() == cityId)
+                            .findFirst()
+                            .orElse(null);
+
+                    if (chosenCity == null) {
+                        System.out.println("Ville introuvable.");
+                        return;
+                    }
+                }
+            } else {
+                chosenCity = readNewCity();
+            }
+
+            // 4) Construire l'objet Restaurant complet
+            Restaurant r = new Restaurant();
+            r.setName(name);
+            r.setWebsite(website.isBlank() ? null : website);
+            r.setDescription(desc.isBlank() ? null : desc);
+            r.setType(chosenType);
+
+            Localisation loc = new Localisation();
+            loc.setStreet(street);
+            loc.setCity(chosenCity);
+
+            r.setAddress(loc);
+
+            // 5) Appel Service (transaction composite Ex6)
+            service.addRestaurant(r);
+
+            System.out.println("✅ Restaurant ajouté (#" + nz(r.getId()) + ") : " + safe(r.getName()));
+
+        } catch (SQLException e) {
+            error("Impossible d'ajouter le restaurant", e);
+        } catch (Exception e) {
+            error("Erreur lors de la saisie", e);
+        }
+    }
+
+    private City readNewCity() {
+        System.out.println("\n-- Nouvelle ville --");
+        String zip = readNonBlank("Code postal: ");
+        String cityName = readNonBlank("Nom de la ville: ");
+
+        City c = new City();
+        c.setZipCode(zip);
+        c.setCityName(cityName);
+        return c;
+    }
+
     // ======================================================================
     // Helpers I/O
     // ======================================================================
@@ -220,6 +323,14 @@ public class Application {
     private String readString(String label) {
         System.out.print(label);
         return in.nextLine();
+    }
+
+    private String readNonBlank(String label) {
+        while (true) {
+            String s = readString(label);
+            if (s != null && !s.trim().isBlank()) return s.trim();
+            System.out.println("Valeur obligatoire.");
+        }
     }
 
     private boolean yesNo(String label) {

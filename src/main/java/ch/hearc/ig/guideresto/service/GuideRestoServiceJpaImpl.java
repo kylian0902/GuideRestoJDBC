@@ -146,4 +146,54 @@ public class GuideRestoServiceJpaImpl implements GuideRestoService {
             throw new SQLException(e);
         }
     }
+
+    @Override
+    public void addRestaurant(Restaurant restaurant) throws SQLException {
+        try {
+            JpaUtils.inTx(em -> {
+
+                if (restaurant == null) throw new IllegalArgumentException("restaurant null");
+                if (restaurant.getType() == null || restaurant.getType().getId() == null)
+                    throw new IllegalArgumentException("RestaurantType manquant (id)");
+                if (restaurant.getAddress() == null)
+                    throw new IllegalArgumentException("Localisation manquante");
+                if (restaurant.getAddress().getCity() == null)
+                    throw new IllegalArgumentException("City manquante");
+                if (restaurant.getAddress().getStreet() == null || restaurant.getAddress().getStreet().isBlank())
+                    throw new IllegalArgumentException("Adresse (street) manquante");
+
+                City city = restaurant.getAddress().getCity();
+
+                City managedCity;
+                if (city.getId() != null) {
+                    managedCity = em.getReference(City.class, city.getId());
+                } else {
+                    City existing = em.createNamedQuery("City.findByZipAndName", City.class)
+                            .setParameter("zip", city.getZipCode())
+                            .setParameter("name", city.getCityName())
+                            .getResultStream()
+                            .findFirst()
+                            .orElse(null);
+
+                    if (existing != null) {
+                        managedCity = existing;
+                    } else {
+                        em.persist(city);      // crée la ville
+                        managedCity = city;    // maintenant managed
+                    }
+                }
+
+                RestaurantType managedType = em.getReference(RestaurantType.class, restaurant.getType().getId());
+
+                restaurant.setType(managedType);
+                restaurant.getAddress().setCity(managedCity);
+
+                em.persist(restaurant);
+
+                return null;
+            });
+        } catch (Exception e) {
+            throw new SQLException(e);
+        }
+    }
 }

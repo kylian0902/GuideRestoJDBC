@@ -54,4 +54,8 @@ public class GuideRestoServiceImpl implements GuideRestoService {
             throw e;
         }
     }
+    @Override
+    public void addRestaurant(Restaurant restaurant) throws SQLException {
+        throw new UnsupportedOperationException("Not implemented in JDBC service (use GuideRestoServiceJpaImpl)");
+    }
 }

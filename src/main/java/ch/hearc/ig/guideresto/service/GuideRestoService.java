@@ -20,4 +20,5 @@ public interface GuideRestoService {
     // Écriture
     void addLike(BasicEvaluation like) throws SQLException;
     void addCompleteEvaluation(CompleteEvaluation eval) throws SQLException;
+    void addRestaurant(Restaurant restaurant) throws SQLException;
 }
